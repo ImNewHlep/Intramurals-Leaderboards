@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mobile Score Updater - Intramurals</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div>
+        <h1 class="site-title">Mobile Score Updater</h1>
+        <p class="site-subtitle">Quick +1 medal taps for court &amp; event marshals</p>
+      </div>
+      <nav class="navbar" aria-label="Main navigation">
+        <a href="index.html">Dashboard</a>
+        <a href="mobile-scorer.html" class="active">Mobile Scorer</a>
+        <a href="adminpanel.html">Admin Panel</a>
+        <a href="about.html">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Quick Medal Entry</h2>
+        <button type="button" id="logoutBtn" class="btn btn-secondary">Log Out</button>
+      </div>
+
+      <div class="field">
+        <label for="teamSelect">Team</label>
+        <select id="teamSelect"></select>
+      </div>
+
+      <div class="field">
+        <label for="eventNote">Event / Game (optional log note)</label>
+        <input type="text" id="eventNote" placeholder="e.g., Volleyball Girls - Finals" />
+      </div>
+
+      <div class="quick-actions">
+        <button type="button" class="quick-btn" data-medal="gold">+1 Gold</button>
+        <button type="button" class="quick-btn" data-medal="silver">+1 Silver</button>
+        <button type="button" class="quick-btn" data-medal="bronze">+1 Bronze</button>
+      </div>
+
+      <div id="currentCounts" class="readme">Select a team to view current medal counts.</div>
+      <div id="statusBox" class="status-box" role="status"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Recent Score Logs</h2>
+      </div>
+      <div id="recentLogs" class="readme">No recent updates logged yet.</div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { db, ref, update, push, onValue, computePoints } from "./firebase-config.js";
+    import { requireAuth, logoutUser } from "./auth.js";
+
+    const authUser = requireAuth();
+    if (!authUser) {
+      throw new Error("Unauthorized");
+    }
+
+    document.getElementById("logoutBtn").addEventListener("click", logoutUser);
+
+    const teamSelect = document.getElementById("teamSelect");
+    const eventNote = document.getElementById("eventNote");
+    const currentCountsEl = document.getElementById("currentCounts");
+    const statusBox = document.getElementById("statusBox");
+    const recentLogsEl = document.getElementById("recentLogs");
+
+    let teamsCache = {};
+
+    function setStatus(msg, type = "ok") {
+      statusBox.textContent = msg;
+      statusBox.className = `status-box show ${type}`;
+    }
+
+    function renderSelectedSummary() {
+      const name = teamSelect.value;
+      const d = teamsCache[name];
+      if (!name || !d) {
+        currentCountsEl.textContent = "Select a team to view current medal counts.";
+        return;
+      }
+      const g = Number(d.gold || 0);
+      const s = Number(d.silver || 0);
+      const b = Number(d.bronze || 0);
+      currentCountsEl.textContent = `${name}: ${g} Gold, ${s} Silver, ${b} Bronze (${computePoints({ gold: g, silver: s, bronze: b })} pts)`;
+    }
+
+    onValue(ref(db, "teams"), (snap) => {
+      const prevSelection = teamSelect.value;
+      teamsCache = snap.val() || {};
+      const names = Object.keys(teamsCache).sort((a, b) => a.localeCompare(b));
+
+      teamSelect.replaceChildren();
+      names.forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = name;
+        opt.textContent = name;
+        teamSelect.appendChild(opt);
+      });
+
+      if (prevSelection && teamsCache[prevSelection]) {
+        teamSelect.value = prevSelection;
+      }
+      renderSelectedSummary();
+    });
+
+    teamSelect.addEventListener("change", renderSelectedSummary);
+
+    document.querySelectorAll(".quick-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const teamName = teamSelect.value;
+        const medal = btn.dataset.medal;
+        if (!teamName || !medal) return;
+
+        const current = teamsCache[teamName] || { gold: 0, silver: 0, bronze: 0 };
+        const nextCount = Number(current[medal] || 0) + 1;
+
+        try {
+          await update(ref(db, `teams/${teamName}`), { [medal]: nextCount });
+          await push(ref(db, "score_logs"), {
+            team: teamName,
+            medal,
+            event: eventNote.value.trim() || "General Update",
+            by: authUser.username,
+            timestamp: Date.now()
+          });
+          setStatus(`Added +1 ${medal.toUpperCase()} to ${teamName} (now ${nextCount}).`, "ok");
+        } catch (err) {
+          setStatus(`Update failed: ${err.message}`, "err");
+        }
+      });
+    });
+
+    onValue(ref(db, "score_logs"), (snap) => {
+      const raw = snap.val() || {};
+      const entries = Object.values(raw)
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+        .slice(0, 8);
+
+      if (!entries.length) {
+        recentLogsEl.textContent = "No recent updates logged yet.";
+        return;
+      }
+
+      recentLogsEl.innerHTML = entries
+        .map(
+          (item) =>
+            `<div><strong>${item.team}</strong> +1 ${String(item.medal).toUpperCase()} — ${item.event || "General Update"}</div>`
+        )
+        .join("");
+    });
+  </script>
+</body>
+</html>

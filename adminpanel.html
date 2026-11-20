@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Intramurals Admin Panel</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div>
+        <h1 class="site-title">Admin Panel — Medal Totals</h1>
+        <p class="site-subtitle">Set exact Gold, Silver, and Bronze counts per team</p>
+      </div>
+      <nav class="navbar" aria-label="Main navigation">
+        <a href="index.html">Dashboard</a>
+        <a href="mobile-scorer.html">Mobile Scorer</a>
+        <a href="adminpanel.html" class="active">Admin Panel</a>
+        <a href="about.html">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Update Team Medals</h2>
+        <button type="button" id="logoutBtn" class="btn btn-secondary">Log Out</button>
+      </div>
+
+      <form id="medalForm">
+        <div class="field">
+          <label for="teamInput">Select or type team name</label>
+          <input id="teamInput" list="teamsDatalist" placeholder="e.g., Grade 7 or Blue Team" required />
+          <datalist id="teamsDatalist"></datalist>
+        </div>
+
+        <div class="medal-grid">
+          <div class="field">
+            <label for="gold">Gold</label>
+            <input id="gold" type="number" min="0" value="0" required />
+          </div>
+          <div class="field">
+            <label for="silver">Silver</label>
+            <input id="silver" type="number" min="0" value="0" required />
+          </div>
+          <div class="field">
+            <label for="bronze">Bronze</label>
+            <input id="bronze" type="number" min="0" value="0" required />
+          </div>
+        </div>
+
+        <button type="submit" id="update-btn" class="btn btn-primary">Save Medal Totals</button>
+        <div id="statusBox" class="status-box" role="status"></div>
+      </form>
+    </section>
+  </main>
+
+  <script type="module">
+    import { db, ref, update, onValue } from "./firebase-config.js";
+    import { requireAuth, logoutUser } from "./auth.js";
+
+    if (!requireAuth()) {
+      throw new Error("Unauthorized");
+    }
+
+    document.getElementById("logoutBtn").addEventListener("click", logoutUser);
+
+    const teamInput = document.getElementById("teamInput");
+    const datalist = document.getElementById("teamsDatalist");
+    const goldInput = document.getElementById("gold");
+    const silverInput = document.getElementById("silver");
+    const bronzeInput = document.getElementById("bronze");
+    const form = document.getElementById("medalForm");
+    const statusBox = document.getElementById("statusBox");
+
+    let latestTeams = {};
+
+    function setStatus(message, type = "ok") {
+      statusBox.textContent = message;
+      statusBox.className = `status-box show ${type}`;
+    }
+
+    function syncInputsForTeam(teamName) {
+      const existing = latestTeams[teamName];
+      goldInput.value = existing ? Number(existing.gold || 0) : 0;
+      silverInput.value = existing ? Number(existing.silver || 0) : 0;
+      bronzeInput.value = existing ? Number(existing.bronze || 0) : 0;
+    }
+
+    onValue(ref(db, "teams"), (snap) => {
+      latestTeams = snap.val() || {};
+      datalist.replaceChildren();
+      Object.keys(latestTeams)
+        .sort((a, b) => a.localeCompare(b))
+        .forEach((teamName) => {
+          const opt = document.createElement("option");
+          opt.value = teamName;
+          datalist.appendChild(opt);
+        });
+    });
+
+    teamInput.addEventListener("input", () => {
+      const teamName = teamInput.value.trim();
+      if (latestTeams[teamName]) {
+        syncInputsForTeam(teamName);
+      }
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const team = teamInput.value.trim();
+      const gold = Math.max(0, parseInt(goldInput.value, 10) || 0);
+      const silver = Math.max(0, parseInt(silverInput.value, 10) || 0);
+      const bronze = Math.max(0, parseInt(bronzeInput.value, 10) || 0);
+
+      if (!team) {
+        setStatus("Please enter or select a team name.", "err");
+        return;
+      }
+
+      try {
+        await update(ref(db, `teams/${team}`), { gold, silver, bronze });
+        setStatus(`Updated ${team}: ${gold} Gold, ${silver} Silver, ${bronze} Bronze.`, "ok");
+      } catch (err) {
+        setStatus(`Failed to update: ${err.message}`, "err");
+      }
+    });
+  </script>
+</body>
+</html>

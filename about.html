@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>About - Intramurals</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div>
+        <h1 class="site-title">About This Project</h1>
+        <p class="site-subtitle">Manolo Fortich National High School Intramurals</p>
+      </div>
+      <nav class="navbar" aria-label="Main navigation">
+        <a href="index.html">Dashboard</a>
+        <a href="mobile-scorer.html">Mobile Scorer</a>
+        <a href="login.html">Admin Panel</a>
+        <a href="about.html" class="active">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <h2>Intramurals Ranking System</h2>
+      <p>
+        Real-time medal tally board built with Firebase for Manolo Fortich National High School Intramurals.
+      </p>
+
+      <div class="about-cards">
+        <div class="info-card">
+          <h3>Developed By</h3>
+          <p>NanoNova Robotics Club – Programming Division</p>
+        </div>
+        <div class="info-card">
+          <h3>Purpose</h3>
+          <p>Provide transparent, fast, and accessible live medal standings across events.</p>
+        </div>
+        <div class="info-card">
+          <h3>Key Capabilities</h3>
+          <ul>
+            <li>Live medal standings and point totals</li>
+            <li>Smooth ranking reorder animations</li>
+            <li>Admin total editor &amp; mobile quick scorer</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <h3>Project Contributors</h3>
+        <ul class="developer-list">
+          <li><strong>Walter Luke III</strong> – Overseer</li>
+          <li><strong>Bien Dy</strong> – Main Project Developer</li>
+          <li><strong>James Clever</strong> – Co-Project Developer</li>
+          <li><strong>Anwhar</strong> – Graphics and Styling</li>
+          <li><strong>Elijah Mitch</strong> – Testing and Minor Debugging</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const backgrounds = [
+      "images/bg1.jpg",
+      "images/bg2.jpg",
+      "images/bg3.jpg",
+      "images/bg4.jpg"
+    ];
+    const picked = backgrounds[Math.floor(Math.random() * backgrounds.length)];
+    document.body.style.backgroundImage =
+      `linear-gradient(rgba(243, 245, 248, 0.88), rgba(243, 245, 248, 0.88)), url("${picked}")`;
+  </script>
+</body>
+</html>

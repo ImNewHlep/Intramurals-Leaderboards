@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Login - Intramurals</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div>
+        <h1 class="site-title">Manolo Fortich National High School Intramurals</h1>
+        <p class="site-subtitle">Scorer &amp; Admin Sign-In</p>
+      </div>
+      <nav class="navbar" aria-label="Main navigation">
+        <a href="index.html">Dashboard</a>
+        <a href="mobile-scorer.html">Mobile Scorer</a>
+        <a href="login.html" class="active">Admin Panel</a>
+        <a href="about.html">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="panel" style="max-width: 440px; margin: 0 auto;">
+      <div class="panel-header">
+        <h2>Admin Sign-In</h2>
+      </div>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="loginUser">Username</label>
+          <input type="text" id="loginUser" autocomplete="username" required />
+        </div>
+
+        <div class="field">
+          <label for="loginPass">Password</label>
+          <input type="password" id="loginPass" autocomplete="current-password" required />
+        </div>
+
+        <button type="submit" id="loginBtn" class="btn btn-primary">Sign In</button>
+        <div id="loginStatus" class="status-box" role="alert"></div>
+      </form>
+    </section>
+  </main>
+
+  <script type="module">
+    import { db, ref, get } from "./firebase-config.js";
+    import { setAuthenticatedUser } from "./auth.js";
+
+    const form = document.getElementById("loginForm");
+    const loginUser = document.getElementById("loginUser");
+    const loginPass = document.getElementById("loginPass");
+    const statusBox = document.getElementById("loginStatus");
+
+    function showError(msg) {
+      statusBox.textContent = msg;
+      statusBox.className = "status-box show err";
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = loginUser.value.trim();
+      const password = loginPass.value.trim();
+
+      if (!username || !password) {
+        showError("Please enter both username and password.");
+        return;
+      }
+
+      try {
+        const snap = await get(ref(db, "accounts/admin1"));
+        if (!snap.exists()) {
+          showError("No admin account found in database.");
+          return;
+        }
+        const account = snap.val();
+        if (username === account.username && password === account.password) {
+          setAuthenticatedUser(username);
+          window.location.href = "adminpanel.html";
+        } else {
+          showError("Invalid username or password.");
+        }
+      } catch (err) {
+        showError(`Sign-in error: ${err.message}`);
+      }
+    });
+  </script>
+</body>
+</html>

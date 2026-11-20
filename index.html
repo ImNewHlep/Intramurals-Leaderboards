@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Intramurals Ranking Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div>
+        <h1 class="site-title">Manolo Fortich National High School Intramurals</h1>
+        <p class="site-subtitle">Live Medal Standings</p>
+      </div>
+      <nav class="navbar" aria-label="Main navigation">
+        <a href="index.html" class="active">Dashboard</a>
+        <a href="mobile-scorer.html">Mobile Scorer</a>
+        <a href="login.html">Admin Panel</a>
+        <a href="about.html">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Overall Standings</h2>
+      </div>
+      <div id="rankingList" class="ranking-list" aria-live="polite"></div>
+      <p class="readme">Scoring: Gold = 3 pts, Silver = 2 pts, Bronze = 1 pt. Tie-breakers: Gold, Silver, Bronze.</p>
+    </section>
+  </main>
+
+  <script type="module">
+    import { db, ref, onValue, computePoints } from "./firebase-config.js";
+
+    const container = document.getElementById("rankingList");
+
+    function createTeamCard(team, rankIndex) {
+      const card = document.createElement("div");
+      const tierClass = rankIndex === 0 ? " top1" : rankIndex === 1 ? " top2" : rankIndex === 2 ? " top3" : "";
+      card.className = `team-card${tierClass}`;
+      card.dataset.team = team.name;
+
+      const rankEl = document.createElement("div");
+      rankEl.className = "rank";
+      rankEl.textContent = `#${rankIndex + 1}`;
+
+      const infoEl = document.createElement("div");
+      infoEl.className = "team-info";
+
+      const logoEl = document.createElement("div");
+      logoEl.className = "logo";
+      logoEl.textContent = team.logo || team.name.charAt(0).toUpperCase();
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "team-name";
+      nameEl.textContent = team.name;
+
+      infoEl.append(logoEl, nameEl);
+
+      const medalsEl = document.createElement("div");
+      medalsEl.className = "medals";
+
+      const goldEl = document.createElement("div");
+      goldEl.className = "medal gold";
+      goldEl.textContent = `Gold ${team.gold}`;
+
+      const silverEl = document.createElement("div");
+      silverEl.className = "medal silver";
+      silverEl.textContent = `Silver ${team.silver}`;
+
+      const bronzeEl = document.createElement("div");
+      bronzeEl.className = "medal bronze";
+      bronzeEl.textContent = `Bronze ${team.bronze}`;
+
+      medalsEl.append(goldEl, silverEl, bronzeEl);
+
+      const ptsEl = document.createElement("div");
+      ptsEl.className = "points";
+      ptsEl.textContent = `${team.points} pts`;
+
+      card.append(rankEl, infoEl, medalsEl, ptsEl);
+      return card;
+    }
+
+    function animateReorder(target, newNodes) {
+      const oldRects = new Map();
+      target.querySelectorAll(".team-card").forEach((node) => {
+        oldRects.set(node.dataset.team, node.getBoundingClientRect());
+      });
+
+      const fragment = document.createDocumentFragment();
+      newNodes.forEach((n) => fragment.appendChild(n));
+      target.replaceChildren(fragment);
+
+      target.querySelectorAll(".team-card").forEach((node) => {
+        const oldRect = oldRects.get(node.dataset.team);
+        const newRect = node.getBoundingClientRect();
+
+        if (oldRect) {
+          const dx = oldRect.left - newRect.left;
+          const dy = oldRect.top - newRect.top;
+          if (dx || dy) {
+            node.style.transform = `translate(${dx}px, ${dy}px)`;
+            node.style.transition = "transform 0s";
+            requestAnimationFrame(() => {
+              node.style.transition = "transform 380ms cubic-bezier(.2,.9,.2,1)";
+              node.style.transform = "";
+            });
+          }
+        }
+      });
+    }
+
+    onValue(ref(db, "teams"), (snap) => {
+      const data = snap.val() || {};
+      const rows = Object.entries(data).map(([name, d = {}]) => {
+        const gold = Number(d.gold || 0);
+        const silver = Number(d.silver || 0);
+        const bronze = Number(d.bronze || 0);
+        return {
+          name,
+          gold,
+          silver,
+          bronze,
+          logo: typeof d.logo === "string" && d.logo.trim() ? d.logo.trim() : "",
+          points: computePoints({ gold, silver, bronze })
+        };
+      });
+
+      rows.sort(
+        (a, b) =>
+          b.points - a.points ||
+          b.gold - a.gold ||
+          b.silver - a.silver ||
+          b.bronze - a.bronze ||
+          a.name.localeCompare(b.name)
+      );
+
+      if (!rows.length) {
+        container.innerHTML = `<p class="readme">No team standings recorded yet.</p>`;
+        return;
+      }
+
+      const cards = rows.map((team, idx) => createTeamCard(team, idx));
+      animateReorder(container, cards);
+    });
+  </script>
+</body>
+</html>
