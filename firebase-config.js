@@ -1,27 +1,25 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js";
-import {
-  getDatabase,
-  ref,
-  set,
-  update,
-  push,
-  onValue,
-  get
-} from "https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js";
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyAN8N1XcIONOH1eRFj9kKvZEj0B2uUSVC8",
-  authDomain: "intramurals-ranking.firebaseapp.com",
-  databaseURL: "https://intramurals-ranking-default-rtdb.firebaseio.com",
-  projectId: "intramurals-ranking",
-  storageBucket: "intramurals-ranking.appspot.com",
-  messagingSenderId: "1066884209753",
-  appId: "1:1066884209753:web:3d7fabfcfb828fb0fb6548",
-  measurementId: "G-XBP1PB2SMX"
+  apiKey: "AIzaSyC_6c8foHcjxCs0lQNfrMyz3RJWG9Q416g",
+  authDomain: "intramurals-leaderboard.firebaseapp.com",
+  databaseURL: "https://intramurals-leaderboard-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "intramurals-leaderboard",
+  storageBucket: "intramurals-leaderboard.firebasestorage.app",
+  messagingSenderId: "915966908321",
+  appId: "1:915966908321:web:10fe4ab0a6caef5d7b1de0",
+  measurementId: "G-HT9ZM96DF2"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app);
+const analytics = getAnalytics(app);
 export { ref, set, update, push, onValue, get };
 
 export function computePoints(teamData = {}) {
